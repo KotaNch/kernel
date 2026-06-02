@@ -7,3 +7,7 @@ Module.symvers
 modules.order
 .tmp_versions/
 .*.cmd
+
+tests.c
+tests.s
+*.out
