@@ -11,3 +11,5 @@ modules.order
 tests.c
 tests.s
 *.out
+
+compile_commands.json
