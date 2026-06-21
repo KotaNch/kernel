@@ -147,7 +147,6 @@ static const struct file_operations cyclic_fops = {
 static int __init cyclic_init(void){
    int ret;
 
-   
    cyclic_buffer = kzalloc(BUFFER_SIZE,GFP_KERNEL);
    if (!cyclic_buffer){
       return -ENOMEM;  

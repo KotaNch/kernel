@@ -13,3 +13,5 @@ tests.s
 *.out
 
 compile_commands.json
+.cache
+userspace/tool
