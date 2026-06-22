@@ -13,14 +13,13 @@
 #define CYCLIC_IOC_AVAILABLE  _IOR(CYCLIC_IOC_MAGIC, 2, int)
 
 static void usage(const char *prog){
-    fprintf(stderr,
-        "Usage: \n"
-        " %s clear\n"
-        " %s write <text\n"
-        " %s read <bytes>\n",
-        " %s avail\n",
-        prog,prog,prog,prog
-    );
+	fprintf(stderr,
+		"Usage:\n"
+		"  %s clear\n"
+		"  %s write <text>\n"
+		"  %s read <bytes>\n"
+		"  %s avail\n",
+		prog, prog, prog, prog);
 }
 
 static int open_device(void){

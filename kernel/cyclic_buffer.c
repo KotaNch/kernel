@@ -134,6 +134,7 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
          if (put_user(avail, (int __user *)arg)){
             return -EFAULT;
          }
+         return 0;
       default:
          return -ENOTTY;
    }
