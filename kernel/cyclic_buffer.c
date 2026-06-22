@@ -1,3 +1,5 @@
+#include "asm-generic/errno-base.h"
+#include "asm/uaccess.h"
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -11,9 +13,12 @@
 #include <linux/errno.h>
 
 
-#define MY_DEVICE_CLEAR _IO('k',1)
 #define DEVICE_NAME "cyclic_buffer"
 #define BUFFER_SIZE 4096
+
+#define CYCLIC_IOC_MAGIC 'k'
+#define CYCLIC_IOC_CLEAR _IO(CYCLIC_IOC_MAGIC,1)
+#define CYCLIC_IOC_AVAILABLE _IOR(CYCLIC_IOC_MAGIC2,2,int)
 
 static char *cyclic_buffer;
 static size_t write_ptr;
@@ -107,8 +112,11 @@ static void clear_buffer(void){
 }
 
 static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
+   int avail;
+
+
    switch (cmd){
-      case MY_DEVICE_CLEAR:
+      case CYCLIC_IOC_CLEAR:
          if(mutex_lock_interruptible(&buffer_mutex)){
             return -ERESTARTSYS;
          }
@@ -116,6 +124,16 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
          mutex_unlock(&buffer_mutex);
          pr_info("%s: buffer cleaned\n", DEVICE_NAME);
          return 0;
+      case CYCLIC_IOC_AVAILABLE:
+         if (mutex_lock_interruptible(&buffer_mutex)){
+            return -ERESTARTSYS;
+         }
+         avail = (int)available_bytes;
+         mutex_unlock(&buffer_mutex);
+
+         if (put_user(avail, (int __user *)arg)){
+            return -EFAULT;
+         }
       default:
          return -ENOTTY;
    }
