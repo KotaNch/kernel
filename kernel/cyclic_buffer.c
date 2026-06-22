@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * cyclic_buffer.c — character device backed by a circular (ring) buffer
+ * living in kernel space. Buffer size is configurable at load time via
+ * the buffer_size module parameter (default 4096 bytes).
+ *
+ * Userspace interface:
+ *   open("/dev/cyclic_buffer", O_RDWR)
+ *   write(fd, data, len)   -> pushes bytes into the ring buffer
+ *   read(fd, buf, len)     -> pops bytes out of the ring buffer
+ *   ioctl(fd, CYCLIC_IOC_CLEAR)              -> reset the buffer
+ *   ioctl(fd, CYCLIC_IOC_AVAILABLE, &int)    -> bytes currently stored
+ *
+ * Author: Ilya
+ */
 #include "asm-generic/errno-base.h"
 #include "asm/uaccess.h"
 #include <linux/module.h>
