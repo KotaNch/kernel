@@ -14,6 +14,8 @@
  * Author: Ilya
  */
 #include "linux/printk.h"
+#include "linux/sysfs.h"
+#include "linux/types.h"
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -53,7 +55,8 @@ static dev_t dev_num;
 static struct class *cyclic_class ;
 static struct device *cyclic_device ;
 
-
+static u64 total_bytes_written;
+static u64 total_bytes_read;
 
 
 static char *cyclic_devnode(const struct device *dev, umode_t *mode){
@@ -86,6 +89,7 @@ static ssize_t write_data(const char __user *user_buf, size_t count){
       if (available_bytes >= buffer_size)
          break;
       if (get_user(cyclic_buffer[write_ptr], &user_buf[i])){
+         total_bytes_written += i;
          mutex_unlock(&buffer_mutex);
          return i ? (size_t)i : -EFAULT;
       }
@@ -94,6 +98,7 @@ static ssize_t write_data(const char __user *user_buf, size_t count){
       available_bytes++;
    }
 
+   total_bytes_written += i;
    mutex_unlock(&buffer_mutex);
    return (ssize_t)i;
 }
@@ -111,15 +116,18 @@ static ssize_t read_data(char __user *user_buf, size_t count){
          break;
       }
       if (put_user(cyclic_buffer[read_ptr], &user_buf[i])) {
+         total_bytes_read += i;
          mutex_unlock(&buffer_mutex);
          return i ? (ssize_t)i : -EFAULT;
       }
+
       read_ptr = (read_ptr + 1) % buffer_size;
       available_bytes--;
       
    } 
 
    
+   total_bytes_read +=i;
    mutex_unlock(&buffer_mutex);
    return (ssize_t)i;
 }
@@ -130,6 +138,53 @@ static void clear_buffer(void){
    read_ptr = 0;
    available_bytes = 0;
 }
+
+static ssize_t bytes_written_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	u64 val;
+
+	mutex_lock(&buffer_mutex);
+	val = total_bytes_written;
+	mutex_unlock(&buffer_mutex);
+
+	return sysfs_emit(buf, "%llu\n", val);
+}
+static DEVICE_ATTR_RO(bytes_written);
+
+static ssize_t bytes_read_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	u64 val;
+
+	mutex_lock(&buffer_mutex);
+	val = total_bytes_read;
+	mutex_unlock(&buffer_mutex);
+
+	return sysfs_emit(buf, "%llu\n", val);
+}
+static DEVICE_ATTR_RO(bytes_read);
+
+static ssize_t fill_percent_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	unsigned int percent;
+
+	mutex_lock(&buffer_mutex);
+	percent = (unsigned int)(available_bytes * 100 / buffer_size);
+	mutex_unlock(&buffer_mutex);
+
+	return sysfs_emit(buf, "%u\n", percent);
+}
+static DEVICE_ATTR_RO(fill_percent);
+
+static struct attribute *cyclic_attrs[] = {
+	&dev_attr_bytes_written.attr,
+	&dev_attr_bytes_read.attr,
+	&dev_attr_fill_percent.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(cyclic);
 
 static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
    int avail;
@@ -205,7 +260,7 @@ static int __init cyclic_init(void){
       goto err_del_cdev;
    }
    cyclic_class->devnode = cyclic_devnode;
-   cyclic_device = device_create(cyclic_class,NULL,dev_num,NULL,DEVICE_NAME);
+   cyclic_device = device_create_with_groups(cyclic_class,NULL,dev_num,NULL, cyclic_groups,DEVICE_NAME);
    if (IS_ERR(cyclic_device)){
       ret = PTR_ERR(cyclic_device);
       goto err_destroy_class;

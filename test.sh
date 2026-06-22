@@ -35,14 +35,29 @@ cat /sys/module/cyclic_buffer/parameters/buffer_size
 echo "== tool: clear =="
 "$TOOL" clear
 
+SYSFS="/sys/class/cyclic_buffer/cyclic_buffer"
+
+echo "== sysfs: initial stats =="
+cat "$SYSFS/bytes_written"
+cat "$SYSFS/bytes_read"
+cat "$SYSFS/fill_percent"
+
 echo "== tool: write =="
 "$TOOL" write "hello kernel"
+
+echo "== sysfs: after write =="
+cat "$SYSFS/bytes_written"
+cat "$SYSFS/fill_percent"
 
 echo "== tool: avail =="
 "$TOOL" avail
 
 echo "== tool: read =="
 "$TOOL" read 12
+
+echo "== sysfs: after read =="
+cat "$SYSFS/bytes_read"
+cat "$SYSFS/fill_percent"
 
 echo "== tool: avail (after read) =="
 "$TOOL" avail
