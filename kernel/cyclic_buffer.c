@@ -13,13 +13,12 @@
  *
  * Author: Ilya
  */
-#include "asm-generic/errno-base.h"
-#include "asm/uaccess.h"
+#include "linux/printk.h"
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h> 
+#include <linux/uaccess.h>
 #include <linux/mutex.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
@@ -28,12 +27,18 @@
 #include <linux/errno.h>
 
 
+
 #define DEVICE_NAME "cyclic_buffer"
-#define BUFFER_SIZE 4096
+#define DEFAULT_BUFFER_SIZE 4096
+#define MAX_BUFFER_SIZE (16 * 1024 * 1024)
 
 #define CYCLIC_IOC_MAGIC 'k'
 #define CYCLIC_IOC_CLEAR _IO(CYCLIC_IOC_MAGIC,1)
 #define CYCLIC_IOC_AVAILABLE _IOR(CYCLIC_IOC_MAGIC,2,int)
+
+static unsigned int buffer_size = DEFAULT_BUFFER_SIZE;
+module_param(buffer_size,uint,0444);
+MODULE_PARM_DESC(buffer_size, "Size of the cyclic buffer in bytes (default 4096)");
 
 static char *cyclic_buffer;
 static size_t write_ptr;
@@ -78,14 +83,14 @@ static ssize_t write_data(const char __user *user_buf, size_t count){
       return -ERESTARTSYS;
    }
    for (i = 0; i < count; i++){
-      if (available_bytes >= BUFFER_SIZE)
+      if (available_bytes >= buffer_size)
          break;
       if (get_user(cyclic_buffer[write_ptr], &user_buf[i])){
          mutex_unlock(&buffer_mutex);
          return i ? (size_t)i : -EFAULT;
       }
 
-      write_ptr = (write_ptr + 1) % BUFFER_SIZE;
+      write_ptr = (write_ptr + 1) % buffer_size;
       available_bytes++;
    }
 
@@ -109,7 +114,7 @@ static ssize_t read_data(char __user *user_buf, size_t count){
          mutex_unlock(&buffer_mutex);
          return i ? (ssize_t)i : -EFAULT;
       }
-      read_ptr = (read_ptr + 1) % BUFFER_SIZE;
+      read_ptr = (read_ptr + 1) % buffer_size;
       available_bytes--;
       
    } 
@@ -120,7 +125,7 @@ static ssize_t read_data(char __user *user_buf, size_t count){
 }
 
 static void clear_buffer(void){
-   memset(cyclic_buffer,0,BUFFER_SIZE);
+   memset(cyclic_buffer,0,buffer_size);
    write_ptr = 0;
    read_ptr = 0;
    available_bytes = 0;
@@ -175,7 +180,11 @@ static const struct file_operations cyclic_fops = {
 static int __init cyclic_init(void){
    int ret;
 
-   cyclic_buffer = kzalloc(BUFFER_SIZE,GFP_KERNEL);
+   if (buffer_size == 0 || buffer_size > MAX_BUFFER_SIZE){
+      pr_err("%s: invalid buffer_size=%u (must be 1..%u)\n",DEVICE_NAME, buffer_size,MAX_BUFFER_SIZE);
+      return -EINVAL;
+   }
+   cyclic_buffer = kzalloc(buffer_size,GFP_KERNEL);
    if (!cyclic_buffer){
       return -ENOMEM;  
    }
