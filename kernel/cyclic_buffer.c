@@ -1,19 +1,14 @@
-#include "asm-generic/errno-base.h"
-#include "asm/bug.h"
-#include "linux/cleanup.h"
-#include "linux/device/class.h"
-#include "linux/err.h"
-#include "linux/gfp_types.h"
-#include "linux/types.h"
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h>
+#include <linux/uaccess.h> 
 #include <linux/mutex.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
+#include <linux/err.h>
+#include <linux/errno.h>
 
 
 #define MY_DEVICE_CLEAR _IO('k',1)
@@ -164,12 +159,11 @@ static int __init cyclic_init(void){
    }
    cyclic_class = class_create(DEVICE_NAME);
    if (IS_ERR(cyclic_class)){
+   }
       ret = PTR_ERR(cyclic_class);
       goto err_del_cdev;
-   }
-   
    cyclic_class->devnode = cyclic_devnode;
-
+  
    cyclic_device = device_create(cyclic_class,NULL,dev_num,NULL,DEVICE_NAME);
    if (IS_ERR(cyclic_device)){
       ret = PTR_ERR(cyclic_device);
