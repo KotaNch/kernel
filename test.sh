@@ -28,6 +28,10 @@ sudo dmesg | tail -5
 echo "-- device node --"
 ls -la /dev/cyclic_buffer
 
+echo "-- buffer_size --"
+cat /sys/module/cyclic_buffer/parameters/buffer_size
+
+
 echo "== tool: clear =="
 "$TOOL" clear
 
