@@ -18,7 +18,7 @@
 
 #define CYCLIC_IOC_MAGIC 'k'
 #define CYCLIC_IOC_CLEAR _IO(CYCLIC_IOC_MAGIC,1)
-#define CYCLIC_IOC_AVAILABLE _IOR(CYCLIC_IOC_MAGIC2,2,int)
+#define CYCLIC_IOC_AVAILABLE _IOR(CYCLIC_IOC_MAGIC,2,int)
 
 static char *cyclic_buffer;
 static size_t write_ptr;
