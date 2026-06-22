@@ -114,7 +114,6 @@ static void clear_buffer(void){
 static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
    int avail;
 
-
    switch (cmd){
       case CYCLIC_IOC_CLEAR:
          if(mutex_lock_interruptible(&buffer_mutex)){
@@ -177,12 +176,11 @@ static int __init cyclic_init(void){
       goto err_unregister_region;
    }
    cyclic_class = class_create(DEVICE_NAME);
-   if (IS_ERR(cyclic_class)){
-   }
+   if (IS_ERR(cyclic_class)) {
       ret = PTR_ERR(cyclic_class);
       goto err_del_cdev;
+   }
    cyclic_class->devnode = cyclic_devnode;
-  
    cyclic_device = device_create(cyclic_class,NULL,dev_num,NULL,DEVICE_NAME);
    if (IS_ERR(cyclic_device)){
       ret = PTR_ERR(cyclic_device);
